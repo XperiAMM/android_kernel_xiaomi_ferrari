@@ -54,6 +54,8 @@ enum {
 	ASM_MAX_CAL_TYPES
 };
 
+#define FRAME_NUM   (8)
+
 /* TODO, combine them together */
 static DEFINE_MUTEX(session_lock);
 struct asm_mmap {
@@ -1100,6 +1102,8 @@ int q6asm_audio_client_buf_alloc(unsigned int dir,
 			pr_debug("%s: buffer already allocated\n", __func__);
 			return 0;
 		}
+		if (bufcnt != FRAME_NUM)
+			goto fail;
 		mutex_lock(&ac->cmd_lock);
 		if (bufcnt > (LONG_MAX/sizeof(struct audio_buffer))) {
 			pr_err("%s: Buffer size overflows", __func__);
@@ -4191,7 +4195,7 @@ static int q6asm_memory_unmap_regions(struct audio_client *ac, int dir)
 	struct audio_port_data *port = NULL;
 	struct asm_buffer_node *buf_node = NULL;
 	struct list_head *ptr, *next;
-	uint32_t buf_add;
+	phys_addr_t buf_add;
 	int	rc = 0;
 	int	cmd_size = 0;
 
@@ -4210,7 +4214,7 @@ static int q6asm_memory_unmap_regions(struct audio_client *ac, int dir)
 			TRUE, ((ac->session << 8) | dir));
 	atomic_set(&ac->mem_state, 1);
 	port = &ac->port[dir];
-	buf_add = (uint32_t)port->buf->phys;
+	buf_add = port->buf->phys;
 	mem_unmap.hdr.opcode = ASM_CMD_SHARED_MEM_UNMAP_REGIONS;
 	mem_unmap.mem_map_handle = 0;
 	list_for_each_safe(ptr, next, &ac->port[dir].mem_map_handle) {
